@@ -10,7 +10,7 @@ public class ProductGenerator {
     private static final int MIN_STRING_LENGTH = 3;
     private static final int MAX_ID = 100000;
     private static final String ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    public static final int PRODUCT_BYTE_SIZE = MAX_STRING_LENGTH + 4;
+    public static final int PRODUCT_BYTE_SIZE = MAX_STRING_LENGTH * 2 + 4; // java char = 2 bytes
 
     public static List<Product> generateProducts(int numberOfProducts) {
         List<Product> generatedProducts = new ArrayList<>();

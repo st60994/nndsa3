@@ -45,4 +45,12 @@ public class Product implements Comparable<Product> {
     public int compareTo(Product o) {
         return this.id.compareTo(o.id);
     }
+
+    @Override
+    public String toString() {
+        return "Product{" +
+                "id=" + id +
+                ", code='" + code + '\'' +
+                '}';
+    }
 }

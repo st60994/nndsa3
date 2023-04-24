@@ -1,6 +1,8 @@
 module cz.upce.nndsa3 {
     requires javafx.controls;
     requires javafx.fxml;
+    requires org.apache.logging.log4j;
+    requires org.apache.logging.log4j.core;
 
 
     opens cz.upce.nndsa3 to javafx.fxml;
@@ -11,4 +13,6 @@ module cz.upce.nndsa3 {
     opens cz.upce.nndsa3.structure to javafx.fxml;
     exports cz.upce.nndsa3.util;
     opens cz.upce.nndsa3.util to javafx.fxml;
+    exports cz.upce.nndsa3.gui;
+    opens cz.upce.nndsa3.gui to javafx.fxml;
 }
