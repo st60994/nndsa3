@@ -23,7 +23,6 @@ public class FindViewController {
         this.indexSequentialFileBuilder = indexSequentialFileBuilder;
         this.tfLog = tfLog;
     }
-
     @FXML
     void handleBtnCancelOnAction(ActionEvent event) {
         GuiUtils.createCancelDialog(tfIdentifier);
@@ -47,6 +46,7 @@ public class FindViewController {
                 FoundProductViewController foundProductViewController = new FoundProductViewController();
                 loader.setController(foundProductViewController);
                 Parent root = loader.load();
+                product.setCode(product.getCode().trim());
                 foundProductViewController.initializeProduct(product.toString());
 
                 Stage newWindow = new Stage();
