@@ -12,13 +12,6 @@ public class GuiUtils {
         alert.showAndWait();
     }
 
-    public static void showInfoDialog(String text) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setHeaderText("Success");
-        alert.setContentText(text);
-        alert.showAndWait();
-    }
-
     public static void createCancelDialog(Node node) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("");

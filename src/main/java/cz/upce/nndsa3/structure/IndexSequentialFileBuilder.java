@@ -1,6 +1,6 @@
 package cz.upce.nndsa3.structure;
 
-import cz.upce.nndsa3.data.*;
+import cz.upce.nndsa3.data.Product;
 import cz.upce.nndsa3.util.BlockLogger;
 import cz.upce.nndsa3.util.ProductGenerator;
 
@@ -13,7 +13,7 @@ import static cz.upce.nndsa3.util.ProductGenerator.PRODUCT_BYTE_SIZE;
 public class IndexSequentialFileBuilder {
 
     private static final int HEADER_SIZE = 16;
-    private static final int INDEX_HEADER_SIZE = 16;
+    private static final int INDEX_HEADER_SIZE = 8;
     private File indexFile;
     private File dataFile;
     private int sectionSize;
@@ -32,22 +32,18 @@ public class IndexSequentialFileBuilder {
     private void saveToDataFile(List<Product> generatedProducts) {
         try {
             FileOutputStream fileOutputStream = new FileOutputStream(dataFile);
-            try (ObjectOutputStream dataOutputStream = new ObjectOutputStream(fileOutputStream)) {
-                int blockSize = (int) Math.sqrt(generatedProducts.size());
-                writeControlBlock(generatedProducts, dataOutputStream, indexFile, blockSize);
-                List<Product> products = new ArrayList<>();
+            try (DataOutputStream dataOutputStream = new DataOutputStream(fileOutputStream)) {
+                writeControlBlock(generatedProducts, dataOutputStream, indexFile);
                 for (Product product : generatedProducts) {
 
                     String productCode = product.getCode();
                     if (productCode.length() < MAX_STRING_LENGTH) {
                         productCode += " ".repeat(MAX_STRING_LENGTH - productCode.length());
                     }
-                    product.setCode(productCode);
-                    products.add(product);
-                    if (products.size() == blockSize) {
-                        dataOutputStream.writeObject(new DataBlock(products));
-                        products = new ArrayList<>();
-                    }
+
+
+                    dataOutputStream.writeInt(product.getId());
+                    dataOutputStream.writeChars(productCode);
                 }
             }
             fileOutputStream.close();
@@ -56,30 +52,27 @@ public class IndexSequentialFileBuilder {
         }
     }
 
-    private void writeControlBlock(List<Product> generatedProducts, ObjectOutputStream objectOutputStream, File indexFile, int blockSize) throws IOException {
+    private void writeControlBlock(List<Product> generatedProducts, DataOutputStream dataOutputStream, File indexFile) throws IOException {
+        int blockSize = (int) Math.sqrt(generatedProducts.size());
         int numberOfBlocks = generatedProducts.size() / blockSize;
         int sectionSize = blockSize * PRODUCT_BYTE_SIZE;
-        ControlBlock controlBlock = new ControlBlock(HEADER_SIZE, blockSize, numberOfBlocks, sectionSize);
-        objectOutputStream.writeObject(controlBlock);
-        saveToIndexFile(generatedProducts, indexFile, blockSize);
+        dataOutputStream.writeInt(HEADER_SIZE);
+        dataOutputStream.writeInt(blockSize);
+        dataOutputStream.writeInt(numberOfBlocks);
+        dataOutputStream.writeInt(sectionSize);
+        saveToIndexFile(generatedProducts, indexFile, blockSize, numberOfBlocks);
     }
 
-    private void saveToIndexFile(List<Product> generatedProducts, File indexFile, int blockSize) {
+    private void saveToIndexFile(List<Product> generatedProducts, File indexFile, int blockSize, int numberOfRecords) {
         try {
             FileOutputStream fileOutputStream = new FileOutputStream(indexFile);
-            try (ObjectOutputStream dataOutputStream = new ObjectOutputStream(fileOutputStream)) {
-                int blockSizeIndex = (int) Math.sqrt(blockSize);
-                ControlBlock indexControlBlock = new ControlBlock(INDEX_HEADER_SIZE, blockSizeIndex, blockSizeIndex, blockSizeIndex * 8);
-                dataOutputStream.writeObject(indexControlBlock);
-                List<Index> indexList = new ArrayList<>();
+            try (DataOutputStream dataOutputStream = new DataOutputStream(fileOutputStream)) {
+                dataOutputStream.writeInt(INDEX_HEADER_SIZE);
+                dataOutputStream.writeInt(numberOfRecords);
                 for (int i = 0; i < generatedProducts.size(); i += blockSize) {
                     int id = generatedProducts.get(i).getId();
-                    Index index = new Index(id, (INDEX_HEADER_SIZE + (long) i * 8));
-                    indexList.add(index);
-                    if (indexList.size() == indexControlBlock.getRecordsInBlock()) {
-                        dataOutputStream.writeObject(new IndexBlock(indexList));
-                        indexList = new ArrayList<>();
-                    }
+                    dataOutputStream.writeInt(generatedProducts.get(i).getId());
+                    dataOutputStream.writeInt(HEADER_SIZE + i * PRODUCT_BYTE_SIZE);
                 }
             }
         } catch (FileNotFoundException e) {
@@ -118,33 +111,8 @@ public class IndexSequentialFileBuilder {
         return findProductInDataBlock(position, key);
     }
 
-    public Product findProductSequential(int key) {
-        long position;
-
-        try (RandomAccessFile raf = new RandomAccessFile(indexFile, "r");
-             ObjectInputStream objectInputStream = new ObjectInputStream(new FileInputStream(raf.getFD()))) {
-            ControlBlock controlBlock = (ControlBlock) objectInputStream.readObject();
-            for (int i = 0; i < controlBlock.getNumberOfBlocks(); i++) {
-                IndexBlock indexBlock = (IndexBlock) objectInputStream.readObject();
-                int previousKey = -1;
-                for (Index index : indexBlock.getIndexList()) {
-                    int currentKey = index.getBeginningID();
-                    if (previousKey != -1 && key >= previousKey && key < currentKey) {
-                        return findProductInDataBlock(index.getPosition(), key);
-                    }
-                    previousKey = currentKey;
-                }
-            }
-
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
-        return null;
-    }
-
-    private Product findProductInDataBlock(long position, int key) {
-        DataBlock dataBlock = readWholeBlock(position);
-        List<Product> products = dataBlock.getProductList();
+    private Product findProductInDataBlock(int position, int key) {
+        List<Product> products = readWholeBlock(position);
         int firstSearchIndex = 0;
         int lastSearchIndex = products.size() - 1;
         int middleIndex;
@@ -169,10 +137,9 @@ public class IndexSequentialFileBuilder {
         Map<Integer, Integer> indexKeyPosition = readIndexValues();
 
         for (Integer location : indexKeyPosition.values()) {
-            //System.out.println(location);
-            DataBlock dataBlock = readWholeBlock(location);
-            List<Product> products = dataBlock.getProductList();
-            for (Product product : products) {
+            System.out.println(location);
+            List<Product> productBlock = readWholeBlock(location);
+            for (Product product : productBlock) {
                 keysList.add(product.getId());
             }
         }
@@ -199,15 +166,29 @@ public class IndexSequentialFileBuilder {
         return indexKeyPositionMap;
     }
 
-    private DataBlock readWholeBlock(long position) {
-        try (RandomAccessFile dataAccessFile = new RandomAccessFile(dataFile, "r");
-             ObjectInputStream objectInputStream = new ObjectInputStream(new FileInputStream(dataAccessFile.getFD()))) {
-            dataAccessFile.seek(HEADER_SIZE);
-            BlockLogger.writeDataBlockAccessToLog(position, (int) (position / sectionSize)); // FIXME divided by zero
+    private List<Product> readWholeBlock(long position) {
+        List<Product> products = new ArrayList<>();
+        try (RandomAccessFile dataAccessFile = new RandomAccessFile(dataFile, "r")) {
+            dataAccessFile.readInt(); // skip header
+            int blockSize = dataAccessFile.readInt();
+            dataAccessFile.readInt(); // skip number of blocks
+            int sectionSize = dataAccessFile.readInt();
+            BlockLogger.writeDataBlockAccessToLog(position, (int) (position / sectionSize));
             dataAccessFile.seek(position);
-            return (DataBlock) objectInputStream.readObject();
-        } catch (Exception e) {
+            for (int i = 0; i < blockSize; i++) {
+                int id = dataAccessFile.readInt();
+                StringBuilder code = new StringBuilder();
+                for (int j = 0; j < 16; j++) {
+                    code.append(dataAccessFile.readChar());
+                }
+                products.add(new Product(id, code.toString()));
+            }
+            System.out.println(dataAccessFile.getFilePointer());
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e.getMessage());
+        } catch (IOException e) {
             throw new RuntimeException(e.getMessage());
         }
+        return products;
     }
 }

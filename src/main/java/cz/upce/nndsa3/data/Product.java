@@ -1,10 +1,8 @@
 package cz.upce.nndsa3.data;
 
-import java.io.Serializable;
 import java.util.Objects;
 
-public class Product implements Serializable, Comparable<Product> {
-    private static final long serialVersionUID = 1L;
+public class Product implements Comparable<Product> {
     private Integer id;
     private String code;
 
