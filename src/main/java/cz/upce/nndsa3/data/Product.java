@@ -1,5 +1,6 @@
 package cz.upce.nndsa3.data;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 public class Product implements Comparable<Product> {

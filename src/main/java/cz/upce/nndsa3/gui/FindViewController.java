@@ -47,6 +47,7 @@ public class FindViewController {
                 FoundProductViewController foundProductViewController = new FoundProductViewController();
                 loader.setController(foundProductViewController);
                 Parent root = loader.load();
+                product.setCode(product.getCode().trim());
                 foundProductViewController.initializeProduct(product.toString());
 
                 Stage newWindow = new Stage();

@@ -10,6 +10,6 @@ public class Main {
 //        indexSequentialFileBuilder.build(10000);
         List<Integer> list = indexSequentialFileBuilder.getAllKeys();
         System.out.println(list.toString());
-        System.out.println(indexSequentialFileBuilder.findProduct(77401));
+//        System.out.println(indexSequentialFileBuilder.findProduct(610));
     }
 }

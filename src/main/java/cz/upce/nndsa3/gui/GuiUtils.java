@@ -21,4 +21,12 @@ public class GuiUtils {
             stage.close();
         }
     }
+
+    public static void showInformationDialog(String text) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setContentText(text);
+        alert.setHeaderText("Success!");
+        alert.showAndWait();
+    }
+
 }

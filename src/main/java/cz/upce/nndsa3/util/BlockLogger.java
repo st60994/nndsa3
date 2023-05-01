@@ -16,6 +16,18 @@ public class BlockLogger {
         log.append("    Accessing data block of index ").append(blockIndex).append(" on position ").append(position).append("\n");
     }
 
+    public static void writeIndexBlockAccessToLog(long position, int blockIndex) {
+        log.append("Accessing index block of index ").append(blockIndex).append(" on position ").append(position).append("\n");
+    }
+
+    public static void writeAccessToIndexControlBlock() {
+        log.append("Accessing the control block of the index file").append("\n");
+    }
+
+    public static void writeAccessToDataControlBlock() {
+        log.append("Accessing the control block of the data file").append("\n");
+    }
+
     public static void writeIndexFileToLog(int index, int key) {
         log.append("Accessing index ").append(index).append(" of the index file with key ").append(key).append("\n");
     }
